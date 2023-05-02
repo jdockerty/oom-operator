@@ -5,7 +5,7 @@ The `oom-operator` is a toy Kubernetes operator to force a number of `OOMKilled`
 ## Description
 The operator places a number of pods into a cluster with the exit code of `137`, signifying an `OOMKilled` pod.
 
-This is inspired by [`kubectl-oomd`](https://github.com/jdockerty/kubectl-oomd) and directly by extension the small helper app [`oomer`](https://github.com/jdockerty/oomer).
+This is inspired by [`kubectl-oomd`](https://github.com/jdockerty/kubectl-oomd) and, more directly, the small helper app [`oomer`](https://github.com/jdockerty/oomer) for the project.
 
 The operator piggybacks from the functionality of a `Deployment` object, passing in a number of replicas to create for the object.
 
