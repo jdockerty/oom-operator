@@ -28,8 +28,8 @@ type OomerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Oomer. Edit oomer_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Replicas is the number of desired OOMKilled pods to deploy.
+	Replicas int `json:"replicas"`
 }
 
 // OomerStatus defines the observed state of Oomer
