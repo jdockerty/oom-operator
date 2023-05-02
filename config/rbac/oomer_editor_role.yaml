@@ -1,0 +1,31 @@
+# permissions for end users to edit oomers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: oomer-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: oom-operator
+    app.kubernetes.io/part-of: oom-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: oomer-editor-role
+rules:
+- apiGroups:
+  - jdocklabs.co.uk
+  resources:
+  - oomers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - jdocklabs.co.uk
+  resources:
+  - oomers/status
+  verbs:
+  - get

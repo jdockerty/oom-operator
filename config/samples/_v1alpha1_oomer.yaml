@@ -1,0 +1,12 @@
+apiVersion: jdocklabs.co.uk/v1alpha1
+kind: Oomer
+metadata:
+  labels:
+    app.kubernetes.io/name: oomer
+    app.kubernetes.io/instance: oomer-sample
+    app.kubernetes.io/part-of: oom-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: oom-operator
+  name: oomer-sample
+spec:
+  # TODO(user): Add fields here
