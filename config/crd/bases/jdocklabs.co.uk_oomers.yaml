@@ -1,0 +1,51 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: oomers.jdocklabs.co.uk
+spec:
+  group: jdocklabs.co.uk
+  names:
+    kind: Oomer
+    listKind: OomerList
+    plural: oomers
+    singular: oomer
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Oomer is the Schema for the oomers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OomerSpec defines the desired state of Oomer
+            properties:
+              replicas:
+                description: Replicas is the number of desired OOMKilled pods to deploy.
+                type: integer
+            required:
+            - replicas
+            type: object
+          status:
+            description: OomerStatus defines the observed state of Oomer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
