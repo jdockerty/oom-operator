@@ -25,7 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	jdocklabscoukv1alpha1 "github.com/jdockerty/oom-operator/api/v1alpha1"
+	oomv1alpha1 "github.com/jdockerty/oom-operator/api/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // OomerReconciler reconciles a Oomer object
@@ -48,9 +49,26 @@ type OomerReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var oomer oomv1alpha1.Oomer
+	if err := r.Get(ctx, req.NamespacedName, &oomer); err != nil {
+		if apierrors.IsNotFound(err) {
+			// we'll ignore not-found errors, since they can't be fixed by an immediate
+			// requeue (we'll need to wait for a new notification), and we can get them
+			// on deleted requests.
+			return ctrl.Result{}, nil
+		}
+		log.Error(err, "unable to fetch Oomer")
+		return ctrl.Result{}, err
+	}
+
+	if oomer.Spec.Replicas == 0 {
+		log.Info("0 replicas, nothing to do")
+		return ctrl.Result{}, nil
+	}
+
+	log.Info("reconciling oomer", "replicas", oomer.Spec.Replicas)
 
 	return ctrl.Result{}, nil
 }
@@ -58,7 +76,7 @@ func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 // SetupWithManager sets up the controller with the Manager.
 func (r *OomerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&jdocklabscoukv1alpha1.Oomer{}).
+		For(&oomv1alpha1.Oomer{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }
