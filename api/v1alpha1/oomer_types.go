@@ -30,12 +30,19 @@ type OomerSpec struct {
 
 	// Replicas is the number of desired OOMKilled pods to deploy.
 	Replicas int `json:"replicas"`
+
+	// Labels are passed directly to the oomer application.
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // OomerStatus defines the observed state of Oomer
 type OomerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Count is the number of observed OOMKilled pods, this should
+	// match the number of configured replicas.
+	Count int `json:"count,omitempty"`
 }
 
 //+kubebuilder:object:root=true
