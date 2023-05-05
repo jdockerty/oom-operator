@@ -70,6 +70,12 @@ func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	log.Info("reconciling oomer", "replicas", oomer.Spec.Replicas)
 
+	oomer.Status.Count = oomer.Spec.Replicas
+	if err := r.Status().Update(ctx, &oomer); err != nil {
+		log.Info("unable to update oomer")
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
