@@ -130,16 +130,14 @@ func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	if oomer.Spec.Replicas == 0 {
-		log.Info("0 replicas, nothing to do")
-		return ctrl.Result{}, nil
-	}
+	//if *oomer.Spec.Replicas == int32(0) {
+	//	log.Info("0 replicas, nothing to do")
+	//	return ctrl.Result{}, nil
+	//}
 
 	log.Info("reconciling oomer", "replicas", oomer.Spec.Replicas)
 
-	oomer.Status.Count = oomer.Spec.Replicas
-	if err := r.Status().Update(ctx, &oomer); err != nil {
-		log.Info("unable to update oomer")
+	if err := r.createOrUpdateDeployment(ctx, req, &oomer, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
