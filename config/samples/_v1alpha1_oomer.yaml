@@ -9,4 +9,4 @@ metadata:
     app.kubernetes.io/created-by: oom-operator
   name: oomer-sample
 spec:
-  # TODO(user): Add fields here
+  replicas: 1

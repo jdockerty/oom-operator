@@ -20,11 +20,14 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
 	oomv1alpha1 "github.com/jdockerty/oom-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -35,19 +38,83 @@ type OomerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl.Request, o *oomv1alpha1.Oomer, log logr.Logger) error {
+
+	d := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        req.Name,
+			Namespace:   req.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: make(map[string]string),
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels:      make(map[string]string),
+					Annotations: make(map[string]string),
+				},
+				Spec: corev1.PodSpec{
+					Containers: make([]corev1.Container, 1),
+				},
+			},
+		},
+	}
+	if err := r.Get(ctx, req.NamespacedName, d); err != nil {
+
+		// If not found, create the Deployment
+		if apierrors.IsNotFound(err) {
+
+			d.Spec.Replicas = o.Spec.Replicas
+
+			if o.Spec.Labels != nil {
+				d.Spec.Selector.MatchLabels = o.Spec.Labels
+				d.Spec.Template.ObjectMeta.Labels = o.Spec.Labels
+			} else {
+				d.Spec.Selector.MatchLabels["app"] = "oomer"
+				d.Spec.Template.ObjectMeta.Labels["app"] = "oomer"
+			}
+
+			if o.Spec.Image != nil {
+				d.Spec.Template.Spec.Containers[0].Image = *o.Spec.Image
+			} else {
+				d.Spec.Template.Spec.Containers[0].Image = "busybox"
+			}
+
+			d.Spec.Template.Spec.Containers[0].Name = "oomer"
+
+			log.Info("underlying deployment not found, creating", "deployment object", d)
+
+			if err := r.Create(ctx, d); err != nil {
+				return err
+			}
+
+			log.Info("updating oomer observed replicas status", "replicas", o.Spec.Replicas)
+			// Update the status of observed replicas to those which are
+			// provided in the spec/to the deployment
+			o.Status.ObservedReplicas = o.Spec.Replicas
+			if err := r.Status().Update(ctx, o); err != nil {
+				log.Info("unable to update oomer status observed replicas")
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=apps,resources=deployments/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Oomer object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 

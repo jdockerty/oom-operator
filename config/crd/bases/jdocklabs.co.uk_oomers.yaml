@@ -35,6 +35,10 @@ spec:
           spec:
             description: OomerSpec defines the desired state of Oomer
             properties:
+              image:
+                description: Image is the container image to use for the oomer application,
+                  if unspecified will default to the latest version.
+                type: string
               labels:
                 additionalProperties:
                   type: string
@@ -42,6 +46,7 @@ spec:
                 type: object
               replicas:
                 description: Replicas is the number of desired OOMKilled pods to deploy.
+                format: int32
                 type: integer
             required:
             - replicas
@@ -52,6 +57,7 @@ spec:
               count:
                 description: Count is the number of observed OOMKilled pods, this
                   should match the number of configured replicas.
+                format: int32
                 type: integer
             type: object
         type: object
