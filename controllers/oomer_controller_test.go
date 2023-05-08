@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -30,6 +31,9 @@ var _ = Describe("Oomer Operator", func() {
 
 	Context("When creating the object", func() {
 		It("Should create an underlying deployment object", func() {
+
+			var replicas int32 = 1
+
 			ctx := context.Background()
 			oom := &oomv1alpha1.Oomer{
 				TypeMeta: metav1.TypeMeta{
@@ -41,7 +45,7 @@ var _ = Describe("Oomer Operator", func() {
 					Namespace: oomerNamespace,
 				},
 				Spec: oomv1alpha1.OomerSpec{
-					Replicas: 1,
+					Replicas: &replicas,
 				},
 			}
 
@@ -58,11 +62,7 @@ var _ = Describe("Oomer Operator", func() {
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			By("checking the oomer status count")
-			Expect(createdOomer.Status.Count).Should(Equal(1))
-
 			By("checking the underlying deployment exists")
-
 			d := &appsv1.Deployment{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, lookupOomer, d)
@@ -71,8 +71,8 @@ var _ = Describe("Oomer Operator", func() {
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-
 			Expect(d.ObjectMeta.Name).Should(Equal(oom.ObjectMeta.Name))
+			Expect(d.Spec.Replicas).Should(Equal(oom.Spec.Replicas))
 		})
 	})
 })
