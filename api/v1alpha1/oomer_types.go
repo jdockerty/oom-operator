@@ -44,9 +44,9 @@ type OomerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Count is the number of observed OOMKilled pods, this should
+	// ObservedReplicas are number of observed OOMKilled pods, this should
 	// match the number of configured replicas.
-	ObservedReplicas *int32 `json:"count,omitempty"`
+	ObservedReplicas *int32 `json:"observedReplicas,omitempty"`
 }
 
 //+kubebuilder:object:root=true
