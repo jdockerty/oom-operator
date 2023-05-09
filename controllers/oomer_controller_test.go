@@ -13,16 +13,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const (
-	oomerApiVersion = "jdocklabs.co.uk/v1alpha1"
-	oomerKind       = "Oomer"
-)
-
 var _ = Describe("Oomer Operator", func() {
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
-		operatorName   = "test-oomer"
-		oomerNamespace = "default"
+		operatorName    = "test-oomer"
+		oomerApiVersion = "jdocklabs.co.uk/v1alpha1"
+		oomerKind       = "Oomer"
+		oomerNamespace  = "default"
 
 		timeout  = time.Second * 10
 		duration = time.Second * 10
@@ -71,8 +68,57 @@ var _ = Describe("Oomer Operator", func() {
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
+
 			Expect(d.ObjectMeta.Name).Should(Equal(oom.ObjectMeta.Name))
 			Expect(d.Spec.Replicas).Should(Equal(oom.Spec.Replicas))
+
+		})
+
+		It("Should update the status to reflect the observed replicas", func() {
+
+			var replicas int32 = 1
+
+			ctx := context.Background()
+			oom := &oomv1alpha1.Oomer{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: oomerApiVersion,
+					Kind:       oomerKind,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      operatorName,
+					Namespace: oomerNamespace,
+				},
+				Spec: oomv1alpha1.OomerSpec{
+					Replicas: &replicas,
+				},
+			}
+
+			Expect(k8sClient.Create(ctx, oom)).Should(Succeed())
+
+			lookupOomer := types.NamespacedName{Name: operatorName, Namespace: oomerNamespace}
+			createdOomer := &oomv1alpha1.Oomer{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupOomer, createdOomer)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			By("checking the underlying deployment exists")
+			d := &appsv1.Deployment{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, lookupOomer, d)
+				if err != nil {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(d.ObjectMeta.Name).Should(Equal(oom.ObjectMeta.Name))
+			Expect(d.Spec.Replicas).Should(Equal(oom.Spec.Replicas))
+
 		})
 	})
 })
