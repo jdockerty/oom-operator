@@ -98,6 +98,10 @@ func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl
 				return err
 			}
 
+			if err := ctrl.SetControllerReference(o, d, r.Scheme); err != nil {
+				return err
+			}
+
 			log.Info("updating oomer observed replicas status", "replicas", o.Spec.Replicas)
 
 			// Update the status of observed replicas to those which are
