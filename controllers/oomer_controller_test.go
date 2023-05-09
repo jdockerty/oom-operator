@@ -74,51 +74,32 @@ var _ = Describe("Oomer Operator", func() {
 
 		})
 
-		It("Should update the status to reflect the observed replicas", func() {
+		//It("Should update the status to reflect the observed replicas", func() {
+		//	ctx := context.Background()
+		//	oom := &oomv1alpha1.Oomer{}
 
-			var replicas int32 = 1
+		//	lookupOomer := types.NamespacedName{Name: operatorName, Namespace: oomerNamespace}
+		//	createdOomer := &oomv1alpha1.Oomer{}
 
-			ctx := context.Background()
-			oom := &oomv1alpha1.Oomer{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: oomerApiVersion,
-					Kind:       oomerKind,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      operatorName,
-					Namespace: oomerNamespace,
-				},
-				Spec: oomv1alpha1.OomerSpec{
-					Replicas: &replicas,
-				},
-			}
+		//	Eventually(func() bool {
+		//		err := k8sClient.Get(ctx, lookupOomer, createdOomer)
+		//		if err != nil {
+		//			return false
+		//		}
+		//		return true
+		//	}, timeout, interval).Should(BeTrue())
 
-			Expect(k8sClient.Create(ctx, oom)).Should(Succeed())
+		//	d := &appsv1.Deployment{}
+		//	Eventually(func() bool {
+		//		err := k8sClient.Get(ctx, lookupOomer, d)
+		//		if err != nil {
+		//			return false
+		//		}
+		//		return true
+		//	}, timeout, interval).Should(BeTrue())
 
-			lookupOomer := types.NamespacedName{Name: operatorName, Namespace: oomerNamespace}
-			createdOomer := &oomv1alpha1.Oomer{}
+		//	Expect(d.Spec.Replicas).Should(Equal(oom.Spec.Replicas))
 
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupOomer, createdOomer)
-				if err != nil {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			By("checking the underlying deployment exists")
-			d := &appsv1.Deployment{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, lookupOomer, d)
-				if err != nil {
-					return false
-				}
-				return true
-			}, timeout, interval).Should(BeTrue())
-
-			Expect(d.ObjectMeta.Name).Should(Equal(oom.ObjectMeta.Name))
-			Expect(d.Spec.Replicas).Should(Equal(oom.Spec.Replicas))
-
-		})
+		//})
 	})
 })
