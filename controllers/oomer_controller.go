@@ -32,6 +32,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
+const (
+	defaultImage           = "jdockerty/oomer:v0.0.1"
+	terminationMessagePath = "/tmp/oomed-pod.log"
+)
+
 // OomerReconciler reconciles a Oomer object
 type OomerReconciler struct {
 	client.Client
@@ -80,23 +85,26 @@ func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl
 			if o.Spec.Image != nil {
 				d.Spec.Template.Spec.Containers[0].Image = *o.Spec.Image
 			} else {
-				d.Spec.Template.Spec.Containers[0].Image = "busybox"
+				d.Spec.Template.Spec.Containers[0].Image = defaultImage
 			}
 
+			log.Info("set image", "image", d.Spec.Template.Spec.Containers[0].Image)
 			d.Spec.Template.Spec.Containers[0].Name = "oomer"
+			d.Spec.Template.Spec.Containers[0].TerminationMessagePath = terminationMessagePath
 
-			log.Info("underlying deployment not found, creating", "deployment object", d)
+			log.Info("underlying deployment not found, creating...")
 
 			if err := r.Create(ctx, d); err != nil {
 				return err
 			}
 
 			log.Info("updating oomer observed replicas status", "replicas", o.Spec.Replicas)
+
 			// Update the status of observed replicas to those which are
 			// provided in the spec/to the deployment
 			o.Status.ObservedReplicas = o.Spec.Replicas
 			if err := r.Status().Update(ctx, o); err != nil {
-				log.Info("unable to update oomer status observed replicas")
+				log.Error(err, "unable to update oomer status observed replicas", "ObservedReplicas", o.Status.ObservedReplicas, "Spec.Replicas", o.Spec.Replicas)
 				return err
 			}
 		}
