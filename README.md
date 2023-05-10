@@ -42,14 +42,15 @@ make uninstall
 ```
 
 ### Undeploy controller
-UnDeploy the controller from the cluster:
+Undeploy the controller from the cluster:
 
 ```sh
 make undeploy
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+This is a toy project, but feel free to use it for learning/fork it to mess around with it :rocket:
 
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
