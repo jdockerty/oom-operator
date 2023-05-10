@@ -23,11 +23,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/go-logr/logr"
 	oomv1alpha1 "github.com/jdockerty/oom-operator/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -35,6 +37,7 @@ import (
 const (
 	defaultImage           = "jdockerty/oomer:v0.0.1"
 	terminationMessagePath = "/tmp/oomed-pod.log"
+	oomerFinalizer         = "jdocklabs.co.uk/finalizer"
 )
 
 // OomerReconciler reconciles a Oomer object
@@ -43,14 +46,16 @@ type OomerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl.Request, o *oomv1alpha1.Oomer, log logr.Logger) error {
+func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, o *oomv1alpha1.Oomer) error {
+
+	log := log.FromContext(ctx)
 
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
-			Name:        req.Name,
-			Namespace:   req.Namespace,
+			Name:        o.ObjectMeta.Name,
+			Namespace:   o.ObjectMeta.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -67,7 +72,12 @@ func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl
 			},
 		},
 	}
-	if err := r.Get(ctx, req.NamespacedName, d); err != nil {
+
+	namespacedName := types.NamespacedName{
+		Name:      o.ObjectMeta.Name,
+		Namespace: o.ObjectMeta.Namespace,
+	}
+	if err := r.Get(ctx, namespacedName, d); err != nil {
 
 		// If not found, create the Deployment
 		if apierrors.IsNotFound(err) {
@@ -118,6 +128,28 @@ func (r *OomerReconciler) createOrUpdateDeployment(ctx context.Context, req ctrl
 	return nil
 }
 
+// deleteDeployment is used to delete the underlying Deployment object.
+// As the name and namespace of the Deployment is the same as the Oomer kind, this can be used
+// to populate values before the Deployment object itself is retrieved.
+func (r *OomerReconciler) deleteDeployment(ctx context.Context, o *oomv1alpha1.Oomer) error {
+	log := log.FromContext(ctx)
+
+	d := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      o.ObjectMeta.Name,
+			Namespace: o.ObjectMeta.Namespace,
+		},
+	}
+
+	if err := r.Delete(ctx, d); err != nil {
+		return err
+	}
+
+	log.Info("deployment deleted", "name", d.ObjectMeta.Name, "namespace", d.ObjectMeta.Namespace)
+
+	return nil
+}
+
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=jdocklabs.co.uk,resources=oomers/finalizers,verbs=update
@@ -142,6 +174,43 @@ func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
+	// If this is zero or nil, then the object is not being deleted
+	// or has not had the finalizer set yet.
+	if oomer.ObjectMeta.DeletionTimestamp.IsZero() {
+
+		// If the finalizer is not present, register it and update the object.
+		if !ctrlutil.ContainsFinalizer(&oomer, oomerFinalizer) {
+
+			ctrlutil.AddFinalizer(&oomer, oomerFinalizer)
+
+			if err := r.Update(ctx, &oomer); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else { // Object is being deleted
+
+		if ctrlutil.ContainsFinalizer(&oomer, oomerFinalizer) {
+
+			// If finalizer is present, delete the underlying Deployment
+			// resource upon a deletion request first.
+			// This means that our Oomer kind cannot be force deleted, leaving an orphaned
+			// Deployment object, this will now be deleted beforehand.
+			if err := r.deleteDeployment(ctx, &oomer); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// Remove finalizer from the list and update object
+			ctrlutil.RemoveFinalizer(&oomer, oomerFinalizer)
+			if err := r.Update(ctx, &oomer); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// Object is deleted, stop reconcile loop
+			return ctrl.Result{}, nil
+		}
+
+	}
+
 	if *oomer.Spec.Replicas == int32(0) {
 		log.Info("0 replicas, no creation")
 		return ctrl.Result{}, nil
@@ -149,7 +218,7 @@ func (r *OomerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	log.Info("reconciling oomer", "replicas", oomer.Spec.Replicas)
 
-	if err := r.createOrUpdateDeployment(ctx, req, &oomer, log); err != nil {
+	if err := r.createOrUpdateDeployment(ctx, &oomer); err != nil {
 		return ctrl.Result{}, err
 	}
 
